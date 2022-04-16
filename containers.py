@@ -41,8 +41,11 @@ class PeekOrdCol(Generic[T]):
     def __repr__(self) -> str:
         return "PeekOrdCol" + str(self._objs)
 
-    def as_tup(self) -> Tuple[PeekOrdProxy[T]]:
+    def as_tup(self) -> Tuple[PeekOrdProxy[T], ...]:
         return tuple(self._objs)
+
+    def as_list(self) -> List[PeekOrdProxy[T]]:
+        return list(self._objs)
 
     def get_or_make_log(self, other: 'PeekOrdCol[T]') -> 'PeekOrdLog[T]':
         if other not in self._logs.keys():
@@ -83,6 +86,12 @@ class PeekOrdEntry(Generic[T]):
     def __ge__(self, other: 'PeekOrdEntry[T]') -> bool:
         return (self == other) | (self > other)
 
+    def left(self) -> PeekOrdProxy[T]:
+        return self.lft_lt_rgh[0]
+
+    def right(self) -> PeekOrdProxy[T]:
+        return self.lft_lt_rgh[1]
+
 
 class PeekOrdTimeline(Generic[T]):
     def __init__(self, *logs: PeekOrdLog[T]):
@@ -92,8 +101,17 @@ class PeekOrdTimeline(Generic[T]):
         entries.sort()
         self._entries: Tuple[PeekOrdEntry[T], ...] = tuple(entries)
 
+    def __repr__(self) -> str:
+        return "PeekOrdTimeline" + str(self._entries)
+
+    def __len__(self):
+        return len(self._entries) + 1
+
     def __getitem__(self, i: SupportsIndex) -> 'PeekOrdFrame[T]':
-        return PeekOrdFrame(self, i.__index__())
+        index: int = i.__index__()
+        if index < 0:
+            return self[len(self) + index]
+        return PeekOrdFrame(self, index)
 
     def past(self, i: SupportsIndex) -> Tuple[PeekOrdEntry[T], ...]:
         return self._entries[0: i.__index__()]
@@ -104,29 +122,39 @@ class PeekOrdFrame(Generic[T]):
         self.timeline: PeekOrdTimeline[T] = timeline
         self.index: int = index
 
+    def __repr__(self) -> str:
+        return "PeekOrdFrame" + str(self.timeline.past(self))
+
     def __index__(self) -> int:
         return self.index
 
-    def check_lt(self, a: PeekOrdProxy[T], b: PeekOrdProxy[T]) -> bool:
-        gt_dict: Dict[PeekOrdProxy[T], Set[PeekOrdProxy[T]]] = dict()
-        for entry in self.timeline.past(self):
-            lhs: PeekOrdProxy[T] = entry.lft_lt_rgh[0]
-            rhs: PeekOrdProxy[T] = entry.lft_lt_rgh[1]
-            if lhs not in gt_dict.keys():
-                gt_dict[lhs] = set()
-            gt_dict[lhs].add(rhs)
+    def le(self, a: PeekOrdProxy[T], b: PeekOrdProxy[T]) -> bool:  # ? a <= b
+        if a == b:
+            return True
+        for x in {entry.right() for entry in self.timeline.past(self) if entry.left() == a}:  # a < x
+            if self.le(x, b):  # ? x <= b
+                return True
+        return False
 
-        def lt(x: PeekOrdProxy[T], y: PeekOrdProxy[T], cache: Set[PeekOrdProxy[T]] = None) -> bool:
-            if cache is None:
-                cache = set()
-            for gt in gt_dict[x]:
-                if gt in cache:
-                    return False
-                elif gt is y:
-                    return True
-                elif lt(gt, y, cache):
-                    return True
-            cache.add(x)
-            return False
+    def lt(self, a: PeekOrdProxy[T], b: PeekOrdProxy[T]) -> bool:  # ? a < b
+        for x in {entry.right() for entry in self.timeline.past(self) if entry.left() == a}:  # a < x
+            if self.le(x, b):  # ? x <= b
+                return True
+        return False
 
-        return lt(a, b)
+    def ge(self, a: PeekOrdProxy[T], b: PeekOrdProxy[T]) -> bool:  # ? a >= b
+        if a == b:
+            return True
+        for x in {entry.left() for entry in self.timeline.past(self) if entry.right() == a}:  # a > x
+            if self.ge(x, b):  # ? x >= b
+                return True
+        return False
+
+    def gt(self, a: PeekOrdProxy[T], b: PeekOrdProxy[T]) -> bool:  # ? a > b
+        for x in {entry.left() for entry in self.timeline.past(self) if entry.right() == a}:  # a > x
+            if self.ge(x, b):  # ? x >= b
+                return True
+        return False
+
+
+
