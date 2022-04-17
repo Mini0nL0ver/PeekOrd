@@ -1,23 +1,43 @@
-from typing import TypeVar, Generic, List, Tuple  # ..., Callable
+from typing import *
 
 T = TypeVar("T")
 
 
 class PeekProxy(Generic[T]):
-    def __init__(self, own: 'PeekOrdList'[T], val: T):
-        self.inner = val
-        self.owner = own
+    def __init__(self, own: 'PeekOrdCol'[T], val: T):
+        self.inner: T = val
+        self._owner: 'PeekOrdCol'[T] = own
+
+    def __lt__(self, other: 'PeekProxy'[T]) -> bool:
+        result = self.inner < other.inner
+        entry = None
+        if result:
+            entry = PeekOrdLogEntry(self, other)
+        else:
+            entry = PeekOrdLogEntry(other, self)
+        # TODO: call owner to store log entry
+        return result
+
+    def __gt__(self, other: 'PeekProxy'[T]) -> bool:
+        result = self.inner > other.inner
+        entry = None
+        if result:
+            entry = PeekOrdLogEntry(other, self)
+        else:
+            entry = PeekOrdLogEntry(self, other)
+        # TODO: call owner to store log entry
+        return result
 
 
-class PeekOrdList(Generic[T], List[PeekProxy[T]]):
+class PeekOrdCol(Generic[T]):
     def __init__(self, *args: List[T]):
-        list.__init__(self, [PeekProxy(self, val) for val in args])
-        self.logs: List['PeekOrdLog'[T]] = list()
+        self._objs: Set[PeekProxy[T]] = set({PeekProxy(self, val) for val in args})
+        self._logs: Dict[PeekOrdCol[T], PeekOrdLog[T]] = dict()
 
 
 class PeekOrdLog(Generic[T]):
-    def __init__(self, list_a: PeekOrdList[T], list_b: PeekOrdList[T]):
-        self.lists: Tuple[PeekOrdList[T], PeekOrdList[T]] = (list_a, list_b)
+    def __init__(self, list_a: PeekOrdCol[T], list_b: PeekOrdCol[T]):
+        self._lists: Tuple[PeekOrdCol[T], PeekOrdCol[T]] = (list_a, list_b)
         self.ord_log: List[PeekOrdLogEntry[T]] = list()
 
 
