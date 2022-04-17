@@ -15,7 +15,7 @@ class PeekProxy(Generic[T]):
             entry = PeekOrdLogEntry(self, other)
         else:
             entry = PeekOrdLogEntry(other, self)
-        # TODO: call owner to store log entry
+        self._owner.get_or_make_log(other._owner).ord_log.append(entry)
         return result
 
     def __gt__(self, other: 'PeekProxy'[T]) -> bool:
@@ -25,7 +25,7 @@ class PeekProxy(Generic[T]):
             entry = PeekOrdLogEntry(other, self)
         else:
             entry = PeekOrdLogEntry(self, other)
-        # TODO: call owner to store log entry
+        self._owner.get_or_make_log(other._owner).ord_log.append(entry)
         return result
 
 
@@ -33,6 +33,14 @@ class PeekOrdCol(Generic[T]):
     def __init__(self, *args: List[T]):
         self._objs: Set[PeekProxy[T]] = set({PeekProxy(self, val) for val in args})
         self._logs: Dict[PeekOrdCol[T], PeekOrdLog[T]] = dict()
+
+    def get_or_make_log(self, other: 'PeekOrdCol'[T]) -> 'PeekOrdLog'[T]:
+        if self._logs[other] is None:
+            log = PeekOrdLog(self, other)
+            self._logs[other] = log
+            other._logs[self] = log
+        # self._logs[other] is defined
+        return self._logs[other]
 
 
 class PeekOrdLog(Generic[T]):
