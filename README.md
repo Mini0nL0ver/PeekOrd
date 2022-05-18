@@ -7,4 +7,4 @@ This library will provide a list extension containing wrapped objects that will 
   * Known order.
   * Export order information as po-set. (https://en.wikipedia.org/wiki/Partially_ordered_set)
 * Simple sorting and merge algorithms.
-* GUI for inspecting snapshots
+* GUI for inspecting snapshots.
