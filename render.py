@@ -1,5 +1,4 @@
 import networkx as nx
-import matplotlib as plt
 from typing import TypeVar
 
 import containers
@@ -11,13 +10,16 @@ def init_poset(frame: containers.PeekOrdFrame, subset_key="order") -> nx.DiGraph
     lft = {entry.left() for entry in frame.timeline._entries}
     rgh = {entry.right() for entry in frame.timeline._entries}
     proxies = [proxy for proxy in lft.union(rgh)]
-    proxies.sort(key=lambda p: p.val)
-    for i in range(len(proxies)):
-        graph.add_node(proxies[i], **{subset_key: i})
+    graph.add_nodes_from(proxies)
     for entry in frame.timeline.past(frame):
         graph.add_edge(entry.left(), entry.right())
-    nx.transitive_reduction(graph)
-    return graph
+    redux = nx.transitive_reduction(graph)
+    new_graph = nx.DiGraph()
+    proxies.sort(key=lambda p: p.val)
+    for i in range(len(proxies)):
+        new_graph.add_node(proxies[i], **{subset_key: i})
+    new_graph.add_edges_from(redux.edges())
+    return new_graph
 
 
 def partialorder_layout(graph: nx.DiGraph, subset_key=None, iterations=50):
