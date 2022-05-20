@@ -10,7 +10,7 @@ class PeekOrdProxy(Generic[T]):
         self._owner: 'PeekOrdCol'[T] = owner
 
     def __repr__(self) -> str:
-        return "PeekOrdProxy(" + str(self.val) + ")"
+        return "(" + str(self.val) + ")"
 
     def __lt__(self, other: 'PeekOrdProxy[T]') -> bool:
         result = self.val < other.val
